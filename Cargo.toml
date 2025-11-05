@@ -1,6 +1,6 @@
 [package]
 name = "srt_subtitles_parser"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 license = "MIT"
 description = "A Rust-based parser that processes .srt (SubRip Subtitle) files and converts them into a structured data format"
