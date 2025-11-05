@@ -1,0 +1,9 @@
+[package]
+name = "srt_subtitles_parser"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "A brief description"
+
+[dependencies]
+peg = "0.8.5"
