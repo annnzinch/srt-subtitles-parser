@@ -1,0 +1,5 @@
+//whitespace handling
+WHITESPACE = _{ " " | "\t" }
+
+//index parsing
+index = { ASCII_DIGIT+ }
