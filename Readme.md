@@ -1,5 +1,9 @@
 # Srt Subtitles Parser
 
+## Links
+
+https://crates.io/crates/srt_subtitles_parser
+
 ## Brief Description
 
 Srt Subtitles Parser is a Rust-based parser that processes `.srt` (SubRip Subtitle) files. The parser reads `.srt` files validates their structure, and extracts subtitle entries consisting of index number, a start timestamp, an end timestamp and one or more lines of subtitle text. The parser converts the file into a structured data format, which can be used for:
