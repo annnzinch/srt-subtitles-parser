@@ -45,42 +45,42 @@ Each subtitle entry consists of:
 ### Grammar Overview
 
 * **WHITESPACE:**
-A whitespace character, which can be a space or a tab.
+a whitespace character, which can be a space or a tab.
 
 ```
 WHITESPACE = _{ " " | "\t" }
 ```
 
 * **NEWLINE:**
-Handles line breaks.
+handles line breaks.
 
 ```
 NEWLINE = _{ "\r\n" | "\n" }
 ```
 
 * **index:**
-Index number (integer).
+index number (integer).
 
 ```
 index = { ASCII_DIGIT+ }
 ```
 
 * **timestamp:**
-Time in `HH:MM:SS,mmm` format.
+time in `HH:MM:SS,mmm` format.
 
 ```
 timestamp = { ASCII_DIGIT ~ ASCII_DIGIT ~ ":" ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ":" ~ ASCII_DIGIT ~ ASCII_DIGIT ~ "," ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT }
 ```
 
 * **timecode:**
-Start and end timestamps separated by `" --> "`.
+start and end timestamps separated by `" --> "`.
 
 ```
 timecode = { timestamp ~ WHITESPACE* ~ "-->" ~ WHITESPACE* ~ timestamp }
 ```
 
 * **text_line** / **text:**
-Subtitle content, which can span multiple lines.
+subtitle content, which can span multiple lines.
 
 ```
 text_line = { (!NEWLINE ~ ANY)* }
@@ -88,14 +88,14 @@ text = { text_line ~ (NEWLINE ~ text_line)* }
 ```
 
 * **subtitle_block:**
-A complete subtitle entry: index, timecode, and text.
+a complete subtitle entry: index, timecode, and text.
 
 ```
 subtitle_block = { index ~ NEWLINE ~ timecode ~ NEWLINE ~ text ~ (NEWLINE+ | EOI) }
 ```
 
 * **file:**
-A full subtitle file containing one or more subtitle blocks.
+a full subtitle file containing one or more subtitle blocks.
 
 ```
 file = { subtitle_block+ }
@@ -135,20 +135,4 @@ This is a multi-line
 subtitle example.
 ```
 
-### Example Output (Structured)
-
-```rust
-vec![
-    Subtitle {
-        index: 1,
-        start_time: "00:00:01,000".to_string(),
-        end_time: "00:00:04,000".to_string(),
-        text: vec!["Single line!".to_string()],
-    },
-    Subtitle {
-        index: 2,
-        start_time: "00:00:05,500".to_string(),
-        end_time: "00:00:08,000".to_string(),
-        text: vec!["This is a multi-line".to_string(), "subtitle example.".to_string()],
-    },
-]
+### Example Output
