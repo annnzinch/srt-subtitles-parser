@@ -44,7 +44,7 @@ Each subtitle entry consists of:
 
 ### Grammar Overview
 
-* **WHITESPACE**
+* **WHITESPACE:**
 A whitespace character, which can be a space or a tab.
 
 ```
