@@ -1,5 +1,20 @@
-//whitespace handling
+//whitespace and newline handling
 WHITESPACE = _{ " " | "\t" }
+NEWLINE = _{ "\r\n" | "\n" }
 
 //index parsing
 index = { ASCII_DIGIT+ }
+
+//timestamps parsing
+timestamp = { ASCII_DIGIT ~ ASCII_DIGIT ~ ":" ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ":" ~ ASCII_DIGIT ~ ASCII_DIGIT ~ "," ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT }
+timecode = { timestamp ~ WHITESPACE* ~ "-->" ~ WHITESPACE* ~ timestamp }
+
+//text parsing
+text_line = { (!NEWLINE ~ ANY)* }
+text = { text_line ~ (NEWLINE ~ text_line)* }
+
+//subtitle block
+subtitle_block = { index ~ NEWLINE ~ timecode ~ NEWLINE ~ text ~ (NEWLINE+ | EOI) }
+
+//file
+file = { subtitle_block+ }
