@@ -45,42 +45,42 @@ Each subtitle entry consists of:
 ### Grammar Overview
 
 * **WHITESPACE**
-  A whitespace character, which can be a space or a tab.
+A whitespace character, which can be a space or a tab.
 
 ```
 WHITESPACE = _{ " " | "\t" }
 ```
 
 * **NEWLINE**
-  Handles line breaks.
+Handles line breaks.
 
 ```
 NEWLINE = _{ "\r\n" | "\n" }
 ```
 
 * **index**
-  Index number (integer).
+Index number (integer).
 
 ```
 index = { ASCII_DIGIT+ }
 ```
 
 * **timestamp**
-  Time in `HH:MM:SS,mmm` format.
+Time in `HH:MM:SS,mmm` format.
 
 ```
 timestamp = { ASCII_DIGIT ~ ASCII_DIGIT ~ ":" ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ":" ~ ASCII_DIGIT ~ ASCII_DIGIT ~ "," ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT }
 ```
 
 * **timecode**
-  Start and end timestamps separated by `" --> "`.
+Start and end timestamps separated by `" --> "`.
 
 ```
 timecode = { timestamp ~ WHITESPACE* ~ "-->" ~ WHITESPACE* ~ timestamp }
 ```
 
 * **text_line** / **text**
-  Subtitle content, which can span multiple lines.
+Subtitle content, which can span multiple lines.
 
 ```
 text_line = { (!NEWLINE ~ ANY)* }
@@ -88,14 +88,14 @@ text = { text_line ~ (NEWLINE ~ text_line)* }
 ```
 
 * **subtitle_block**
-  A complete subtitle entry: index, timecode, and text.
+A complete subtitle entry: index, timecode, and text.
 
 ```
 subtitle_block = { index ~ NEWLINE ~ timecode ~ NEWLINE ~ text ~ (NEWLINE+ | EOI) }
 ```
 
 * **file**
-  A full subtitle file containing one or more subtitle blocks.
+A full subtitle file containing one or more subtitle blocks.
 
 ```
 file = { subtitle_block+ }
