@@ -1,74 +1,125 @@
 use pest::Parser;
 use pest_derive::Parser;
 use anyhow::{Result, Context};
+use std::fmt;
 
 #[derive(Parser)]
-#[grammar = "./grammar.pest"]
+#[grammar = "grammar.pest"]
 pub struct SrtSubtitleParser;
 
-#[derive(Debug, Clone)]
-pub struct Subtitle {
-    pub index: u32,
-    pub start_time: String,
-    pub end_time: String,
-    pub text: Vec<String>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubtitleFile {
+    pub subtitles: Vec<Subtitle>,
 }
 
-//subtitle block parsing
-pub fn parse_subtitle_block(input: &str) -> Result<Subtitle> {
-    let mut pairs = SrtSubtitleParser::parse(Rule::subtitle_block, input)
-        .context("Failed to parse the subtitle block")?;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Subtitle {
+    pub index: u32,
+    pub start: Timestamp,
+    pub end: Timestamp,
+    pub text: String,
+}
 
-    let block = pairs.next().context("No subtitle block found")?;
+#[derive(Debug, Clone, PartialEq)]
+pub struct Timestamp {
+    pub hours: u32,
+    pub minutes: u32,
+    pub seconds: u32,
+    pub milliseconds: u32,
+}
 
-    let mut index: u32 = 0;
-    let mut start_time = String::new();
-    let mut end_time = String::new();
-    let mut text_lines: Vec<String> = Vec::new();
+impl fmt::Display for Timestamp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{:02}:{:02}:{:02},{:03}",
+            self.hours, self.minutes, self.seconds, self.milliseconds
+        )
+    }
+}
 
-    for pair in block.into_inner() {
-        match pair.as_rule() {
-            Rule::index => {
-                index = pair.as_str().parse::<u32>()
-                    .context("Failed to parse the index")?;
-            }
-            Rule::timecode => {
-                let mut timestamps = pair.into_inner();
-                let start = timestamps.next().context("No start timestamp")?;
-                let end = timestamps.next().context("No end timestamp")?;
-                start_time = start.as_str().to_string();
-                end_time = end.as_str().to_string();
-            }
-            Rule::text => {
-                for line in pair.into_inner().filter(|p| p.as_rule() == Rule::text_line) {
-                    let s = line.as_str();
-                    if !s.trim().is_empty() {
-                        text_lines.push(s.to_string());
-                    }
+pub fn parse_srt(input: &str) -> Result<SubtitleFile> {
+    let pairs = SrtSubtitleParser::parse(Rule::subtitle_file, input)
+        .context("Failed to parse SRT file")?;
+
+    let mut subtitles = Vec::new();
+
+    for pair in pairs {
+        for inner_pair in pair.into_inner() {
+            match inner_pair.as_rule() {
+                Rule::subtitle_block => {
+                    subtitles.push(parse_subtitle_block(inner_pair)?);
                 }
+                Rule::EOI => {}
+                _ => {}
             }
-            _ => {}
         }
     }
+
+    Ok(SubtitleFile { subtitles })
+}
+
+fn parse_subtitle_block(pair: pest::iterators::Pair<Rule>) -> Result<Subtitle> {
+    let mut inner = pair.into_inner();
+
+    //index
+    let index_pair = inner.next()
+        .context("Missing index in subtitle block")?;
+    let index: u32 = index_pair.as_str().parse()
+        .context("Failed to parse index")?;
+
+    //timecode
+    let timecode_pair = inner.next()
+        .context("Missing timecode in subtitle block")?;
+    let mut timecode_inner = timecode_pair.into_inner();
+    
+    let start_timestamp = timecode_inner.next()
+        .context("Missing start timestamp")?;
+    let start = parse_timestamp(start_timestamp)?;
+    
+    let end_timestamp = timecode_inner.next()
+        .context("Missing end timestamp")?;
+    let end = parse_timestamp(end_timestamp)?;
+
+    //text_content
+    let text_pair = inner.next()
+        .context("Missing text content in subtitle block")?;
+    let text = parse_text(text_pair);
 
     Ok(Subtitle {
         index,
-        start_time,
-        end_time,
-        text: text_lines,
+        start,
+        end,
+        text,
     })
 }
 
+fn parse_timestamp(pair: pest::iterators::Pair<Rule>) -> Result<Timestamp> {
+    let mut inner = pair.into_inner();
 
-//file parsing
-pub fn parse_file(input: &str) -> Result<Vec<Subtitle>> {
-    let mut subtitles = Vec::new();
+    Ok(Timestamp {
+        hours: inner.next()
+            .context("Missing hours")?
+            .as_str().parse()
+            .context("Failed to parse hours")?,
+        minutes: inner.next()
+            .context("Missing minutes")?
+            .as_str().parse()
+            .context("Failed to parse minutes")?,
+        seconds: inner.next()
+            .context("Missing seconds")?
+            .as_str().parse()
+            .context("Failed to parse seconds")?,
+        milliseconds: inner.next()
+            .context("Missing milliseconds")?
+            .as_str().parse()
+            .context("Failed to parse milliseconds")?,
+    })
+}
 
-    for block_text in input.split("\n\n") {
-        if !block_text.trim().is_empty() {
-            subtitles.push(parse_subtitle_block(block_text)?);
-        }
-    }
-
-    Ok(subtitles)
+fn parse_text(pair: pest::iterators::Pair<Rule>) -> String {
+    pair.into_inner()
+        .map(|p| p.as_str())
+        .collect::<Vec<_>>()
+        .join("\n")
 }

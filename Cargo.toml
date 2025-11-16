@@ -9,3 +9,7 @@ description = "A Rust-based parser that processes .srt (SubRip Subtitle) files a
 pest = "2.8.3"
 pest_derive = "2.8.3"
 anyhow = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+toml = "0.8"

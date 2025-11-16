@@ -105,7 +105,7 @@ file = { subtitle_block+ }
 
 The parsing process includes:
 
-1. **Reading**: .srt text input
+1. **Reading**: input file path or raw .srt text
 2. **Tokenization**: splitting input into subtitle blocks using Pest grammar rules
 3. **Extracting**: parsing each block to extract: index, start and end timestamps and text content
 4. **Validating**: checking timestamps (format, valid time ranges, non-overlapping) and block order
@@ -123,16 +123,5 @@ The structured subtitle data enables:
 
 
 ### Example Input
-
-```
-1
-00:00:01,000 --> 00:00:04,000
-Single line!
-
-2
-00:00:05,500 --> 00:00:08,000
-This is a multi-line
-subtitle example.
-```
 
 ### Example Output

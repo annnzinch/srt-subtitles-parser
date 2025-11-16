@@ -3,18 +3,33 @@ WHITESPACE = _{ " " | "\t" }
 NEWLINE = _{ "\r\n" | "\n" }
 
 //index parsing
-index = { ASCII_DIGIT+ }
+index = @{ ASCII_DIGIT+ }
 
 //timestamps parsing
-timestamp = { ASCII_DIGIT ~ ASCII_DIGIT ~ ":" ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ":" ~ ASCII_DIGIT ~ ASCII_DIGIT ~ "," ~ ASCII_DIGIT ~ ASCII_DIGIT ~ ASCII_DIGIT }
+hours = @{ ASCII_DIGIT{2} }
+minutes = @{ ASCII_DIGIT{2} }
+seconds = @{ ASCII_DIGIT{2} }
+milliseconds = @{ ASCII_DIGIT{3} }
+
+timestamp = { hours ~ ":" ~ minutes ~ ":" ~ seconds ~ "," ~ milliseconds }
 timecode = { timestamp ~ WHITESPACE* ~ "-->" ~ WHITESPACE* ~ timestamp }
 
 //text parsing
-text_line = { (!NEWLINE ~ ANY)* }
-text = { text_line ~ (NEWLINE ~ text_line)* }
+text_line = @{ (!NEWLINE ~ ANY)+ }
+text_content = { text_line ~ (NEWLINE ~ text_line)* }
 
 //subtitle block
-subtitle_block = { index ~ NEWLINE ~ timecode ~ NEWLINE ~ text ~ (NEWLINE+ | EOI) }
+subtitle_block = { 
+    index ~ NEWLINE ~ 
+    timecode ~ NEWLINE ~ 
+    text_content ~ NEWLINE ~
+    NEWLINE
+}
 
 //file
-file = { subtitle_block+ }
+subtitle_file = { 
+    SOI ~ 
+    (subtitle_block)+ ~
+    NEWLINE* ~
+    EOI 
+}
