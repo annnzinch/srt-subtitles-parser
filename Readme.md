@@ -2,7 +2,7 @@
 
 ## Links
 
-Crate: https://crates.io/crates/srt_subtitles_parser
+Crate: https://crates.io/crates/srt_subtitles_parser  
 Docs: https://docs.rs/srt_subtitles_parser
 
 ## Brief Description
