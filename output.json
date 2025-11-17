@@ -1,0 +1,148 @@
+{
+  "subtitles": [
+    {
+      "index": 1,
+      "start": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 0,
+        "milliseconds": 0
+      },
+      "end": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 2,
+        "milliseconds": 500
+      },
+      "text": "Welcome to the Example Subtitle File!"
+    },
+    {
+      "index": 2,
+      "start": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 3,
+        "milliseconds": 0
+      },
+      "end": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 6,
+        "milliseconds": 0
+      },
+      "text": "This is a demonstration of SRT subtitles."
+    },
+    {
+      "index": 3,
+      "start": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 7,
+        "milliseconds": 0
+      },
+      "end": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 10,
+        "milliseconds": 500
+      },
+      "text": "You can use SRT files to add subtitles to your videos."
+    },
+    {
+      "index": 4,
+      "start": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 12,
+        "milliseconds": 0
+      },
+      "end": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 15,
+        "milliseconds": 0
+      },
+      "text": "Each subtitle entry consists of a number, a timecode,\nand the subtitle text."
+    },
+    {
+      "index": 5,
+      "start": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 16,
+        "milliseconds": 0
+      },
+      "end": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 20,
+        "milliseconds": 0
+      },
+      "text": "The timecode format is hours:minutes:seconds,milliseconds."
+    },
+    {
+      "index": 6,
+      "start": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 21,
+        "milliseconds": 0
+      },
+      "end": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 25,
+        "milliseconds": 0
+      },
+      "text": "You can adjust the timing to match your video."
+    },
+    {
+      "index": 7,
+      "start": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 26,
+        "milliseconds": 0
+      },
+      "end": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 30,
+        "milliseconds": 0
+      },
+      "text": "Make sure the subtitle text is clear and readable."
+    },
+    {
+      "index": 8,
+      "start": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 31,
+        "milliseconds": 0
+      },
+      "end": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 35,
+        "milliseconds": 0
+      },
+      "text": "And that's how you create an SRT subtitle file!"
+    },
+    {
+      "index": 9,
+      "start": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 36,
+        "milliseconds": 0
+      },
+      "end": {
+        "hours": 0,
+        "minutes": 0,
+        "seconds": 40,
+        "milliseconds": 0
+      },
+      "text": "Enjoy adding subtitles to your videos!"
+    }
+  ]
+}

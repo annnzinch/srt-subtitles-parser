@@ -2,17 +2,18 @@ use pest::Parser;
 use pest_derive::Parser;
 use anyhow::{Result, Context};
 use std::fmt;
+use serde::{Serialize, Deserialize};
 
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 pub struct SrtSubtitleParser;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SubtitleFile {
     pub subtitles: Vec<Subtitle>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Subtitle {
     pub index: u32,
     pub start: Timestamp,
@@ -20,12 +21,32 @@ pub struct Subtitle {
     pub text: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Timestamp {
     pub hours: u32,
     pub minutes: u32,
     pub seconds: u32,
     pub milliseconds: u32,
+}
+
+impl Timestamp {
+    //convert timestamp to millisconds
+    pub fn to_ms(&self) -> u64 {
+        (self.hours as u64 * 3600000) +
+        (self.minutes as u64 * 60000) +
+        (self.seconds as u64 * 1000) +
+        (self.milliseconds as u64)
+    }
+
+    //create timestamp from milliseconds
+    pub fn from_ms(ms: u64) -> Self {
+        let hours = (ms / 3600000) as u32;
+        let minutes = ((ms % 3600000) / 60000) as u32;
+        let seconds = ((ms % 60000) / 1000) as u32;
+        let milliseconds = (ms % 1000) as u32;
+        
+        Timestamp { hours, minutes, seconds, milliseconds }
+    }
 }
 
 impl fmt::Display for Timestamp {
@@ -35,6 +56,42 @@ impl fmt::Display for Timestamp {
             "{:02}:{:02}:{:02},{:03}",
             self.hours, self.minutes, self.seconds, self.milliseconds
         )
+    }
+}
+
+
+impl SubtitleFile {
+    //convert to json
+    pub fn to_json(&self) -> Result<String> {
+        serde_json::to_string_pretty(self)
+            .context("Failed to serialize to JSON")
+    }
+
+    //create from json
+    pub fn from_json(json: &str) -> Result<Self> {
+        serde_json::from_str(json)
+            .context("Failed to deserialize from JSON")
+    }
+
+    //convert back to srt
+    pub fn to_srt(&self) -> String {
+        self.subtitles.iter()
+            .map(|s| format!(
+                "{}\n{} --> {}\n{}\n\n",
+                s.index, s.start, s.end, s.text
+            ))
+            .collect::<String>()
+    }
+
+    //shift subtitles
+    pub fn shift_time(&mut self, offset_ms: i64) {
+        for subtitle in &mut self.subtitles {
+            let start_ms = subtitle.start.to_ms() as i64 + offset_ms;
+            let end_ms = subtitle.end.to_ms() as i64 + offset_ms;
+            
+            subtitle.start = Timestamp::from_ms(start_ms.max(0) as u64);
+            subtitle.end = Timestamp::from_ms(end_ms.max(0) as u64);
+        }
     }
 }
 
