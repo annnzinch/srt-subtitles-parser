@@ -1,166 +1,76 @@
-use srt_subtitles_parser::*;
-use std::io::{self, Write};
+use anyhow::Result;
+use srt_subtitles_parser::{SubtitleFile, parse_srt};
 use std::fs;
+use std::io::{self, Write};
 
-fn main() {
+fn main() -> Result<()> {
+    println!("SRT Parser");
+    println!("Type 'help' for available commands");
+
     loop {
-        println!("\nSRT Subtitles Parser\n");
-        println!("Select an action:");
-        println!("1. Convert SRT to JSON");
-        println!("2. Convert JSON to SRT");
-        println!("3. Shift timestamps");
-        println!("4. Show credits");
-        println!("5. Exit");
-        print!("Enter choice [1-5]: ");
-        io::stdout().flush().unwrap();
+        print!("> ");
+        io::stdout().flush()?;
 
-        let mut choice = String::new();
-        io::stdin().read_line(&mut choice).unwrap();
-        let choice = choice.trim();
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        let input = input.trim();
 
-        match choice {
-            "1" => srt_to_json(),
-            "2" => json_to_srt(),
-            "3" => shift_timestamps(),
-            "4" => show_credits(),
-            "5" => {
-                println!("Exiting...");
-                break;
-            }
-            _ => println!("Invalid choice, try again."),
-        }
-    }
-}
+        let mut parts = input.split_whitespace();
+        let command = parts.next();
 
-fn srt_to_json() {
-    let path = read_file_path("Enter path to SRT file: ");
-    let content = match fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            return;
-        }
-    };
-
-    match parse_srt(&content) {
-        Ok(subs) => {
-            match subs.to_json() {
-                Ok(json) => {
-                    let out_file = "output.json";
-                    fs::write(out_file, json).ok();
-                    println!("Parsed {} subtitles.", subs.subtitles.len());
-                    println!("JSON saved to '{}'", out_file);
+        match command {
+            Some("parse-to-json") => {
+                if let (Some(file), Some(output)) = (parts.next(), parts.next()) {
+                    let content = fs::read_to_string(file)?;
+                    let subtitles = parse_srt(&content)?;
+                    fs::write(output, subtitles.to_json()?)?;
+                    println!("JSON saved to '{}'", output);
+                } else {
+                    println!("Usage: parse-to-json <file.srt> <output.json>");
                 }
-                Err(e) => eprintln!("Serialization error: {}", e),
             }
-        }
-        Err(e) => eprintln!("Parse error: {}", e),
-    }
-}
-
-fn json_to_srt() {
-    let path = read_file_path("Enter path to JSON file: ");
-    let content = match fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            return;
-        }
-    };
-
-    match SubtitleFile::from_json(&content) {
-        Ok(subs) => {
-            let out_file = "output.srt";
-            fs::write(out_file, subs.to_srt()).ok();
-            println!("Parsed {} subtitles.", subs.subtitles.len());
-            println!("SRT saved to '{}'", out_file);
-        }
-        Err(e) => eprintln!("Deserialization error: {}", e),
-    }
-}
-
-fn shift_timestamps() {
-    let path = read_file_path("Enter path to SRT or JSON file: ");
-    let content = match fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(e) => {
-            eprintln!("Error reading file: {}", e);
-            return;
-        }
-    };
-
-    let mut subs = if path.ends_with(".json") {
-        match SubtitleFile::from_json(&content) {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("Deserialization error: {}", e);
-                return;
-            }
-        }
-    } else {
-        match parse_srt(&content) {
-            Ok(s) => s,
-            Err(e) => {
-                eprintln!("Parse error: {}", e);
-                return;
-            }
-        }
-    };
-
-    println!("Enter offset in milliseconds (positive or negative): ");
-    let mut offset_str = String::new();
-    io::stdin().read_line(&mut offset_str).unwrap();
-    let offset_ms: i64 = match offset_str.trim().parse() {
-        Ok(n) => n,
-        Err(_) => {
-            eprintln!("Invalid number.");
-            return;
-        }
-    };
-
-    subs.shift_time(offset_ms);
-
-    println!("Choose output format:");
-    println!("1. SRT");
-    println!("2. JSON");
-    print!("Enter choice [1-2]: ");
-    io::stdout().flush().unwrap();
-    let mut fmt_choice = String::new();
-    io::stdin().read_line(&mut fmt_choice).unwrap();
-    let fmt_choice = fmt_choice.trim();
-
-    match fmt_choice {
-        "1" => {
-            let out_file = "shifted_output.srt";
-            fs::write(out_file, subs.to_srt()).ok();
-            println!("Shifted SRT saved to '{}'", out_file);
-        }
-        "2" => {
-            match subs.to_json() {
-                Ok(json) => {
-                    let out_file = "shifted_output.json";
-                    fs::write(out_file, json).ok();
-                    println!("Shifted JSON saved to '{}'", out_file);
+            Some("parse-to-srt") => {
+                if let (Some(file), Some(output)) = (parts.next(), parts.next()) {
+                    let content = fs::read_to_string(file)?;
+                    let subtitles = SubtitleFile::from_json(&content)?;
+                    fs::write(output, subtitles.to_srt())?;
+                    println!("SRT saved to '{}'", output);
+                } else {
+                    println!("Usage: parse-to-srt <file.json> <output.srt>");
                 }
-                Err(e) => eprintln!("Serialization error: {}", e),
             }
+            Some("shift-time") => {
+                if let (Some(file), Some(offset_str), Some(output)) =
+                    (parts.next(), parts.next(), parts.next())
+                {
+                    let offset: i64 = offset_str.parse()?;
+                    let content = fs::read_to_string(file)?;
+                    let mut subtitles = parse_srt(&content)?;
+                    subtitles.shift_time(offset);
+                    fs::write(output, subtitles.to_srt())?;
+                    println!("Shifted SRT saved to '{}'", output);
+                } else {
+                    println!("Usage: shift-time <file.srt> <offset_ms> <output.srt>");
+                }
+            }
+            Some("credits") => {
+                println!("Author: Anna Zinchenko\nVersion: 0.1.0");
+            }
+            Some("help") => {
+                println!("Available commands:");
+                println!("parse-to-json <file.srt> <output.json>           - Convert SRT to JSON");
+                println!("parse-to-srt <file.json> <output.srt>           - Convert JSON to SRT");
+                println!(
+                    "shift-time <file.srt> <offset_ms> <output.srt>  - Shift timestamps by offset"
+                );
+                println!("credits                                         - Show author info");
+                println!("exit                                            - Quit program");
+            }
+            Some("exit") => break,
+            Some(other) => println!("Unknown command: {}", other),
+            None => continue,
         }
-        _ => println!("Invalid choice, skipping output."),
     }
-}
 
-fn show_credits() {
-    println!("SRT Subtitles Parser v{}", env!("CARGO_PKG_VERSION"));
-    println!("Author: {}", env!("CARGO_PKG_AUTHORS"));
-    println!("License: {}", env!("CARGO_PKG_LICENSE"));
-    println!("Repository: {}", env!("CARGO_PKG_REPOSITORY"));
-
-}
-
-fn read_file_path(prompt: &str) -> String {
-    print!("{}", prompt);
-    io::stdout().flush().unwrap();
-    let mut path = String::new();
-    io::stdin().read_line(&mut path).unwrap();
-    path.trim().to_string()
+    Ok(())
 }

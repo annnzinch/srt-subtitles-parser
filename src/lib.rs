@@ -1,18 +1,41 @@
+use anyhow::{Context, Result};
 use pest::Parser;
 use pest_derive::Parser;
-use anyhow::{Result, Context};
+use serde::{Deserialize, Serialize};
 use std::fmt;
-use serde::{Serialize, Deserialize};
+use thiserror::Error;
 
+/// Parser for SRT subtitle files using Pest grammar
 #[derive(Parser)]
 #[grammar = "grammar.pest"]
 pub struct SrtSubtitleParser;
 
+/// Errors
+#[derive(Error, Debug)]
+pub enum SrtError {
+    #[error("Failed to parse SRT file")]
+    ParseError(#[from] anyhow::Error),
+
+    #[error("Missing expected component in subtitle block: {0}")]
+    MissingComponent(String),
+
+    #[error("Invalid timestamp: {0}")]
+    InvalidTimestamp(String),
+
+    #[error("Failed to parse index: {0}")]
+    InvalidIndex(String),
+
+    #[error("JSON error: {0}")]
+    JsonError(#[from] serde_json::Error),
+}
+
+/// Represents a full subtitle file containing multiple subtitle entries
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SubtitleFile {
     pub subtitles: Vec<Subtitle>,
 }
 
+/// Represents a single subtitle entry
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Subtitle {
     pub index: u32,
@@ -21,6 +44,7 @@ pub struct Subtitle {
     pub text: String,
 }
 
+/// Represents a single subtitle timestamp with hours, minutes, seconds, and milliseconds
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Timestamp {
     pub hours: u32,
@@ -30,22 +54,27 @@ pub struct Timestamp {
 }
 
 impl Timestamp {
-    //convert timestamp to millisconds
+    /// Converts timestamp to milliseconds
     pub fn to_ms(&self) -> u64 {
-        (self.hours as u64 * 3600000) +
-        (self.minutes as u64 * 60000) +
-        (self.seconds as u64 * 1000) +
-        (self.milliseconds as u64)
+        (self.hours as u64 * 3600000)
+            + (self.minutes as u64 * 60000)
+            + (self.seconds as u64 * 1000)
+            + (self.milliseconds as u64)
     }
 
-    //create timestamp from milliseconds
+    /// Creates timestamp from milliseconds
     pub fn from_ms(ms: u64) -> Self {
         let hours = (ms / 3600000) as u32;
         let minutes = ((ms % 3600000) / 60000) as u32;
         let seconds = ((ms % 60000) / 1000) as u32;
         let milliseconds = (ms % 1000) as u32;
-        
-        Timestamp { hours, minutes, seconds, milliseconds }
+
+        Timestamp {
+            hours,
+            minutes,
+            seconds,
+            milliseconds,
+        }
     }
 }
 
@@ -59,45 +88,41 @@ impl fmt::Display for Timestamp {
     }
 }
 
-
 impl SubtitleFile {
-    //convert to json
-    pub fn to_json(&self) -> Result<String> {
-        serde_json::to_string_pretty(self)
-            .context("Failed to serialize to JSON")
+    /// Converts SubtitleFile to json
+    pub fn to_json(&self) -> Result<String, SrtError> {
+        serde_json::to_string_pretty(self).map_err(SrtError::JsonError)
     }
 
-    //create from json
-    pub fn from_json(json: &str) -> Result<Self> {
-        serde_json::from_str(json)
-            .context("Failed to deserialize from JSON")
+    /// Creates SubtitleFile from json
+    pub fn from_json(json: &str) -> Result<Self, SrtError> {
+        serde_json::from_str(json).map_err(SrtError::JsonError)
     }
 
-    //convert back to srt
+    /// Converts SubtitleFile back to srt
     pub fn to_srt(&self) -> String {
-        self.subtitles.iter()
-            .map(|s| format!(
-                "{}\n{} --> {}\n{}\n\n",
-                s.index, s.start, s.end, s.text
-            ))
+        self.subtitles
+            .iter()
+            .map(|s| format!("{}\n{} --> {}\n{}\n\n", s.index, s.start, s.end, s.text))
             .collect::<String>()
     }
 
-    //shift subtitles
+    /// Shifts subtitles
     pub fn shift_time(&mut self, offset_ms: i64) {
         for subtitle in &mut self.subtitles {
             let start_ms = subtitle.start.to_ms() as i64 + offset_ms;
             let end_ms = subtitle.end.to_ms() as i64 + offset_ms;
-            
+
             subtitle.start = Timestamp::from_ms(start_ms.max(0) as u64);
             subtitle.end = Timestamp::from_ms(end_ms.max(0) as u64);
         }
     }
 }
 
-pub fn parse_srt(input: &str) -> Result<SubtitleFile> {
-    let pairs = SrtSubtitleParser::parse(Rule::subtitle_file, input)
-        .context("Failed to parse SRT file")?;
+/// Parses an SRT file content into a SubtitleFile struct
+pub fn parse_srt(input: &str) -> Result<SubtitleFile, SrtError> {
+    let pairs =
+        SrtSubtitleParser::parse(Rule::subtitle_file, input).context("Failed to parse SRT file")?;
 
     let mut subtitles = Vec::new();
 
@@ -116,31 +141,39 @@ pub fn parse_srt(input: &str) -> Result<SubtitleFile> {
     Ok(SubtitleFile { subtitles })
 }
 
-fn parse_subtitle_block(pair: pest::iterators::Pair<Rule>) -> Result<Subtitle> {
+/// Parses a single subtitle block into a Subtitle struct
+pub fn parse_subtitle_block(pair: pest::iterators::Pair<Rule>) -> Result<Subtitle, SrtError> {
     let mut inner = pair.into_inner();
 
     //index
-    let index_pair = inner.next()
-        .context("Missing index in subtitle block")?;
-    let index: u32 = index_pair.as_str().parse()
-        .context("Failed to parse index")?;
+    let index_pair = inner
+        .next()
+        .ok_or_else(|| SrtError::MissingComponent("index".into()))?;
+    let index: u32 = index_pair
+        .as_str()
+        .parse()
+        .map_err(|_| SrtError::InvalidIndex(index_pair.as_str().into()))?;
 
     //timecode
-    let timecode_pair = inner.next()
-        .context("Missing timecode in subtitle block")?;
+    let timecode_pair = inner
+        .next()
+        .ok_or_else(|| SrtError::MissingComponent("timecode".into()))?;
     let mut timecode_inner = timecode_pair.into_inner();
-    
-    let start_timestamp = timecode_inner.next()
-        .context("Missing start timestamp")?;
+
+    let start_timestamp = timecode_inner
+        .next()
+        .ok_or_else(|| SrtError::MissingComponent("start timestamp".into()))?;
     let start = parse_timestamp(start_timestamp)?;
-    
-    let end_timestamp = timecode_inner.next()
-        .context("Missing end timestamp")?;
+
+    let end_timestamp = timecode_inner
+        .next()
+        .ok_or_else(|| SrtError::MissingComponent("end timestamp".into()))?;
     let end = parse_timestamp(end_timestamp)?;
 
     //text_content
-    let text_pair = inner.next()
-        .context("Missing text content in subtitle block")?;
+    let text_pair = inner
+        .next()
+        .ok_or_else(|| SrtError::MissingComponent("text content".into()))?;
     let text = parse_text(text_pair);
 
     Ok(Subtitle {
@@ -151,30 +184,45 @@ fn parse_subtitle_block(pair: pest::iterators::Pair<Rule>) -> Result<Subtitle> {
     })
 }
 
-fn parse_timestamp(pair: pest::iterators::Pair<Rule>) -> Result<Timestamp> {
+/// Parses a timestamp pair into a Timestamp struct
+pub fn parse_timestamp(pair: pest::iterators::Pair<Rule>) -> Result<Timestamp, SrtError> {
     let mut inner = pair.into_inner();
 
+    let hours = inner
+        .next()
+        .ok_or_else(|| SrtError::MissingComponent("hours".into()))?
+        .as_str()
+        .parse()
+        .map_err(|_| SrtError::InvalidTimestamp("hours".into()))?;
+    let minutes = inner
+        .next()
+        .ok_or_else(|| SrtError::MissingComponent("minutes".into()))?
+        .as_str()
+        .parse()
+        .map_err(|_| SrtError::InvalidTimestamp("minutes".into()))?;
+    let seconds = inner
+        .next()
+        .ok_or_else(|| SrtError::MissingComponent("seconds".into()))?
+        .as_str()
+        .parse()
+        .map_err(|_| SrtError::InvalidTimestamp("seconds".into()))?;
+    let milliseconds = inner
+        .next()
+        .ok_or_else(|| SrtError::MissingComponent("milliseconds".into()))?
+        .as_str()
+        .parse()
+        .map_err(|_| SrtError::InvalidTimestamp("milliseconds".into()))?;
+
     Ok(Timestamp {
-        hours: inner.next()
-            .context("Missing hours")?
-            .as_str().parse()
-            .context("Failed to parse hours")?,
-        minutes: inner.next()
-            .context("Missing minutes")?
-            .as_str().parse()
-            .context("Failed to parse minutes")?,
-        seconds: inner.next()
-            .context("Missing seconds")?
-            .as_str().parse()
-            .context("Failed to parse seconds")?,
-        milliseconds: inner.next()
-            .context("Missing milliseconds")?
-            .as_str().parse()
-            .context("Failed to parse milliseconds")?,
+        hours,
+        minutes,
+        seconds,
+        milliseconds,
     })
 }
 
-fn parse_text(pair: pest::iterators::Pair<Rule>) -> String {
+/// Converts a text_content pair into a single string, joining lines with \n
+pub fn parse_text(pair: pest::iterators::Pair<Rule>) -> String {
     pair.into_inner()
         .map(|p| p.as_str())
         .collect::<Vec<_>>()
