@@ -3,8 +3,7 @@
 ## Links
 
 Crate: https://crates.io/crates/srt_subtitles_parser
-Docs: file:///C:/Users/zinch/%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D0%B8/university/rust_course/srt_subtitles_parser/target/doc/srt_subtitles_parser/index.html
-
+Docs: https://docs.rs/srt_subtitles_parser
 
 ## Brief Description
 
